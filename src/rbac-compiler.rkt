@@ -103,12 +103,16 @@
               (let ([items (map parse-inner (syntax->list #'(item (... ...))))])
                 #`(let-values ([(lhs rhs)
                                 (partition pred-lhs? (list #,@items))])
-                    (make lhs rhs)))]))]))
+                    (make lhs rhs)))]))])))
 
-  (define (parse-ua-info stx)
-    (parse-binary-relation stx UA make-ua-info ua-user-info?
-                           roles make-ua-user-info
-                           users make-ua-role-info)))
+(define-for-syntax (parse-ua-info stx)
+  (parse-binary-relation stx UA make-ua-info ua-user-info?
+                         roles make-ua-user-info
+                         users make-ua-role-info))
+(define-for-syntax (parse-ra-info stx)
+  (parse-binary-relation stx RA make-ra-info ra-role-info?
+                         perms make-ra-role-info
+                         roles make-ra-perm-info))
 
 
 
@@ -116,18 +120,13 @@
 ;; parser macros
 (define-syntax (rbac-state stx)
   (syntax-case stx ()
-    [(_ users
-        roles
-        perms
-        uas)
-     ;(UA uas ...))
+    [(_ users roles perms uas ras)
      (let ([users (parse-users #'users)]
            [roles (parse-roles #'roles)]
            [perms (parse-perms #'perms)]
            [ua (parse-ua-info #'uas)]
-           [ra #'1])
+           [ra (parse-ra-info #'ras)])
        #`(make-raw-ac-state #,users #,roles #,perms #,ua #,ra))]))
-
 
 
 ;; examples
@@ -142,9 +141,9 @@
        (tim has roles (alas-member research-assistant grad-student))
        (research-assistant has 5 users)
        (teaching-assistant has 3 users also (francis) but not (salman))
-       (professor has ? users including (dan) but not (theo)))))
-;   (RA (alas-member has 3 permissions including lab-entry)
-;       (lab-entry has 3 roles))))
+       (professor has ? users including (dan) but not (theo)))
+   (RA (alas-member has 3 perms including (lab-entry))
+       (lab-entry has 3 roles))))
 
 ;;; q1 gets string
 ;(define query1 (rbac-query query))
