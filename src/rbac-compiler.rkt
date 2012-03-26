@@ -1,8 +1,5 @@
 #lang racket
-(require 
- (for-meta 2 racket/base)
- (for-meta 3 racket/base)
- (for-meta 4 racket/base))
+(require (for-meta 2 racket/base))
 
 ;; AST
 ;; the raw AC state that needs to be converted to a vocab and query-part
@@ -35,23 +32,23 @@
               (make (+ n (length items)) items))]
          [(name n including item (... ...))
           #'(make n (list 'item (... ...)))]
+         ; equivalent to (name 0 also item ...)
          [(name item (... ...))
           #'(let ([items (list 'item (... ...))])
-              (make (length items) items))])])))
+              (make (length items) items))])]))
+
+    ;; Parser for the Users clause.
+    (define (parse-users stx)
+     (unary-relation-parser stx Users make-users-info))
 
 
-;; Parser for the Users clause.
-(define-for-syntax (parse-users stx)
-  (unary-relation-parser stx Users make-users-info))
+    ;; Parser for the Roles clause.
+    (define (parse-roles stx)
+     (unary-relation-parser stx Roles make-roles-info))
 
-
-;; Parser for the Roles clause.
-(define-for-syntax (parse-roles stx)
-  (unary-relation-parser stx Roles make-roles-info))
-
-;; Parser for the Perms clause.
-(define-for-syntax (parse-perms stx)
-  (unary-relation-parser stx Perms make-perms-info))
+    ;; Parser for the Perms clause.
+    (define (parse-perms stx)
+     (unary-relation-parser stx Perms make-perms-info)))
 
 
 (begin-for-syntax
