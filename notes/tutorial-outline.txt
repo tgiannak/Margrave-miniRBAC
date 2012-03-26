@@ -1,0 +1,16 @@
+Step 1: Figure out what information you want to be able to express and capture using your DSL.
+
+Step 2: Create ASTs for that data.
+
+Step 3: Define what the data means logically.
+
+Step 4: Write the translation from the ASTs to Margrave.
+
+Step 5: If there is a useful syntax for writing down the information you are
+trying to capture, write macros to parse the DSL.
+
+Step 6: If there is an output format that works more clearly with your input
+syntax, then write a function to transform scenarios to that format.
+
+Step 7: Write a high-level API that handles passing data and queries through
+Margrave.

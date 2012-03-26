@@ -1,0 +1,42 @@
+----- for now
+
+define all relations explicitly. only require positive entries, though.
+
+----- later
+;; for unary relations: size and naming distinct constants
+
+;; there are n users, but i'm not naming any
+(Users n)
+;; there are n+k users, and i'm naming k of them
+(Users n also user_1 ... user_k)
+;; there are n users and i'm naming k of them (k<=n)
+(Users n including user_1 ... user_k)
+
+(Users 0 also salman tim)
+
+;; for binary relns: size for given selections and forcing inclusion/exclusion
+;; of tuples
+
+(exists r1 Role (exists r2 Role (exists r3 Role
+    (and (r1 != r2) (r1 != r3) (r2 != r3)
+         (ua 'kathi r1) (ua 'kathi r2) (ua 'kathi r3)
+         (r1 = 'professor)
+         (r1 != 'student)
+         (r2 != 'student)
+         (r3 != 'student)
+         (forall r Roles (implies (UA 'kathi r)
+                                   (or (r = r1) (r = r2) (r = r3))))))))
+
+UA (salman has 3 roles including research-assistant)
+   (kathi has 3 roles including professor but not student)
+   (theo has 2 roles also teaching-assistant)
+   (tim has 0 roles also alas-member research-assistant grad-student)
+   (research-assistant has 5 users)
+   (teaching-assistant has 3 users also francis but not salman kathi)
+   (professor has ? users including dan but not theo)
+   ;; this is what happens to unspecified roles
+   (student has ? users)
+
+RA (alas-member has 3 permissions including lab-entry)
+   (lab-entry has 3 roles)
+
