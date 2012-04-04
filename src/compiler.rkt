@@ -1,31 +1,10 @@
 #lang racket
 
-(define-struct/contract predicate
-  ([name symbol?]
-   [sort (listof symbol?)])
-  #:transparent)
-
-(define-struct/contract sort-constraint
-  ([name symbol?]
-   [count (or/c #f exact-nonnegative-integer?)]
-   [names (listof symbol?)])
-  #:transparent)
-
-(define-struct/contract size-constraint
-  ([pred predicate?]
-   [fixed (listof (or/c #f symbol?))]
-   [count exact-nonnegative-integer?])
-  #:transparent)
-
-(define-struct/contract contents-constraint
-  ([name symbol?]
-   [contains (listof (listof symbol?))]
-   [omits (listof (listof symbol?))])
-  #:transparent)
-
+(require margrave
+         "constraints.rkt")
 ;; an ac-state is a list of constraints
 
-(define (sort-constraint->formula name count names)
+(define (sort-constraint->formula name count consts)
   'true)
 
 ;; Finds all 2-subsets of a list. For example
@@ -69,18 +48,22 @@
     (foldl (lambda (v s matrix) `(,quant ,v ,s ,matrix)) matrix vs sorts))
   (foldl (lambda (vs matrix) (make-quant vs sorts matrix)) matrix vars))
 
+;; Looks up the sort of the predicate in the vocab
+(define (predicate-sort pred voc)
+  (hash-ref (m-vocabulary-predicates voc) pred))
+
 ;; Makes the prefix and generates the vars for the "at most" portion of the size constraint.
 ;; Consists of forall quantifiers over all of the sorts in the pred.
-(define (make-prefix-at-most pred fixed count)
+(define (make-prefix-at-most pred fixed count voc)
   (let ([vars (gen-vars (length fixed) (add1 count))]
-        [sorts (predicate-sort pred)])
+        [sorts (predicate-sort pred voc)])
     (values vars (lambda (matrix) (make-quantifiers 'forall vars sorts matrix)))))
 
 ;; Makes the prefix and generates the vars for the "at least" portion of the size constraint.
 ;; Consists of exists quantifiers over the sorts in the pred with no given values.
-(define (make-prefix-at-least pred fixed count)
+(define (make-prefix-at-least pred fixed count voc)
   (let ([vars (gen-vars (length (filter not fixed)) count)]
-        [selected-sorts (foldr (lambda (x v rest) (if x rest (cons v rest))) empty fixed (predicate-sort pred))])
+        [selected-sorts (foldr (lambda (x v rest) (if x rest (cons v rest))) empty fixed (predicate-sort pred voc))])
     (values vars (lambda (matrix) (make-quantifiers 'exists vars selected-sorts matrix)))))
 
 ;; Replaces the #f values from cs with values from vs in the order that they appear.
@@ -99,37 +82,36 @@
 ;; For example (size-constraint->formula 'R '(a #f) 3)
 ;; says that there are exactly 3 tuples whose first element is a in the
 ;; instance of 'R.
-(define (size-constraint->formula pred fixed count)
-  (let ([name (predicate-name pred)])
-    `(and
-      ;; At most count tuples
-      ,(let-values ([(vars prefix) (make-prefix-at-most pred fixed count)])
-             ;; pigeonhole principle: if there are only count things in pred, if 
-             ;; we see count+1 things, then two of them must be the same
-             (prefix `(impiles (and ,@(map (lambda (xs) `(,name ,@xs)) vars))
-                               (or ,@(map (lambda (x) (apply all-equal x)) (2-subsets vars))))))
-      ;; At least count tuples
-      ,(let-values ([(vars prefix) (make-prefix-at-least pred fixed count)])
-         (let* ([vars-with-consts (map (lambda (vs) (replace-falses fixed vs)) vars)])
-           (prefix `(and ,@(map (lambda (xs) `(,name ,@xs)) vars-with-consts)
-                         ,@(map (lambda (x) (apply any-not-equal x)) (2-subsets vars)))))))))
+(define (size-constraint->formula pred fixed count voc)
+  `(and
+    ;; At most count tuples
+    ,(let-values ([(vars prefix) (make-prefix-at-most pred fixed count voc)])
+       ;; pigeonhole principle: if there are only count things in pred, if 
+       ;; we see count+1 things, then two of them must be the same
+       (prefix `(impiles (and ,@(map (lambda (xs) `(,pred ,@xs)) vars))
+                         (or ,@(map (lambda (x) (apply all-equal x)) (2-subsets vars))))))
+    ;; At least count tuples
+    ,(let-values ([(vars prefix) (make-prefix-at-least pred fixed count voc)])
+       (let* ([vars-with-consts (map (lambda (vs) (replace-falses fixed vs)) vars)])
+         (prefix `(and ,@(map (lambda (xs) `(,pred ,@xs)) vars-with-consts)
+                       ,@(map (lambda (x) (apply any-not-equal x)) (2-subsets vars))))))))
 
 ;; Creates a formula that asserts that the predicate contains the tuples in
 ;; contains and does not have any tuple in omits.
-(define (content-constraint->formula name contains omits)
-  `(and ,@(map (lambda (x) `(,name ,@x)) contains)
-        ,@(map (lambda (x) `(not (,name ,@x))) omits)))
+(define (content-constraint->formula pred contains omits)
+  `(and ,@(map (lambda (x) `(,pred ,@x)) contains)
+        ,@(map (lambda (x) `(not (,pred ,@x))) omits)))
 
 ;; Turns a single constraint into a formula.
-(define (constraint->formula constr)
+(define (constraint->formula constr voc)
   (match constr
-    [(sort-constraint name count names)
-     (sort-constraint->formula name count names)]
+    [(sort-constraint name count consts)
+     (sort-constraint->formula name count consts)]
     [(size-constraint pred fixed count)
-     (size-constraint->formula pred fixed count)]
+     (size-constraint->formula pred fixed count voc)]
     [(contents-constraint name contains omits)
      (content-constraint->formula name contains omits)]))
 
 ;; Turns a list of constraints into a formula.
-(define (constraints->formula constrs)
-  `(and ,@(map constraint->formula constrs)))
+(define (constraints->formula constrs voc)
+  `(and ,@(map constraint->formula constrs voc)))
