@@ -1,5 +1,7 @@
 #lang racket
 
+(require "util.rkt")
+
 (provide (all-defined-out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,12 +75,12 @@
 
 ;; A helper for creating a list of constraints for both contained and omitted
 ;; tuples.
-(define (make-pred-tuple-constraints pred contains omits)
-  (append (make-pred-contains-constraints pred contains)
-          (make-pred-omits-constraints pred omits)))
+(define (make-pred-tuple-constraints pred fixed contains omits)
+  (append (make-pred-contains-constraints pred (fill-in-falses* fixed contains))
+          (make-pred-omits-constraints pred (fill-in-falses* fixed omits))))
 
 ;; A helper for creating a list of constraints for both contained and omitted
 ;; tuples and the predicate size.
 (define (make-pred-constraints pred fixed count contains omits)
   (cons (pred-size-constraint pred fixed count)
-        (make-pred-tuple-constraints pred contains omits)))
+        (make-pred-tuple-constraints pred fixed contains omits)))

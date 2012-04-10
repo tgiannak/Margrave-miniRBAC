@@ -2,28 +2,12 @@
 
 (require margrave
          "constraints.rkt"
-         "compile-vocab.rkt")
+         "compile-vocab.rkt"
+         "util.rkt")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; General utility functions
+;; Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Converts two symbols to strings in order to append them, and then
-;; converts the resulting string back into a symbol before returning it.
-(define (symbol-append a b)
-  (string->symbol
-   (string-append (symbol->string a)
-                  (symbol->string b))))
-
-;; Fills in the false values in the maybes with the values from vals
-;; in the order that they appear in vals.
-(define (fill-in-falses maybes vals)
-  (match maybes
-    [(list) empty]
-    [(cons #f ms)
-     (cons (first vals) (fill-in-falses ms (rest vals)))]
-    [(cons m ms)
-     (cons m (fill-in-falses ms vals))]))
 
 ;; Creates ngroups groups of nsyms gensym symbols. For example
 ;; (gensym-groups 3 2)
@@ -61,7 +45,7 @@
 ;; in the given var-groups are equal.
 (define (some-var-same var-groups)
   (define (group-eq vs xs)
-    `(or ,@(map (lambda (v x) `(= ,v ,x)) vs xs)))
+    `(and ,@(map (lambda (v x) `(= ,v ,x)) vs xs)))
   (define (some-var-same* var-groups)
     (match var-groups
       [(list) empty]
@@ -142,29 +126,35 @@
     (let* ([var-groups (gensym-groups count nvars)]
            [vars/sorts (var-groups/sorts var-groups var-sorts)]
            [matrix (all-vars-distinct var-groups)])
-      (existentials-prefix (append* vars/sorts) matrix)))
+      (existentials-prefix
+       (append* vars/sorts)
+       `(and ,@(map (lambda (vars) `(,pred ,@vars)) var-groups)
+             ,matrix))))
   
   (define max-pred-size
     (let* ([var-groups (gensym-groups count nvars)]
            [vars/sorts (var-groups/sorts var-groups var-sorts)]
            [matrix (some-var-same var-groups)])
-      (universals-prefix (append* vars/sorts) matrix)))
+      (universals-prefix
+       (append* vars/sorts)
+       `(implies (and ,@(map (lambda (vars) `(,pred ,@vars)) var-groups))
+                 ,matrix))))
   
-  (list min-pred-size
-        max-pred-size))
+  (list `(formula ,min-pred-size)
+        `(formula ,max-pred-size)))
                       
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Converts pred-contains-constraints into Margrave constraints.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (pred-contains-constraint->m-constraints voc pred tuple)
-  `(formula (pred ,@tuple)))
+  (list `(formula (,pred ,@tuple))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Converts pred-omits-constraints into Margrave constraints.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (pred-omits-constraint->m-constraints voc pred tuple)
-  `(formula (not (pred ,@tuple))))
+  (list `(formula (not (,pred ,@tuple)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Converts a list of constraints into a list of Margrave constraints.
@@ -194,11 +184,12 @@
          [marg-constrs (constraints->margrave-constraints voc constraints)])
     (m-theory name empty voc marg-constrs)))
 
-(define cs
-  (append (make-sort-constraints 'Role 10 '(student prof facutly grad ta ra))
-          (make-sort-constraints 'Subject 5 '(sarah theo francis))
-          (make-sort-constraints 'Permission 4 '(grade submit-hw))
-          (make-pred-constraints 'ua '(#f ta) 2 empty empty)))
+(define my-theory
+  (constraints->theory "my-theory"
+   (append (make-sort-constraints 'Role 10 '(student prof facutly grad ta ra))
+           (make-sort-constraints 'Subject 8 '(sarah theo francis salman tim))
+           (make-sort-constraints 'Permission 4 '(grade submit-hw))
+           (make-pred-constraints 'ua '(#f ta) 2 '((sarah)) '((salman) (tim))))))
 
 #|
 ;; The sort constraints are here converted into a formula that restricts the number
