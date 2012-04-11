@@ -9,17 +9,17 @@
 (define (constraints->m-policy name constrs)
   (let ([theory (constraints->m-theory name constrs)]
         [vardecs (hash 'u (m-vardec 'u 'User)
-                       'p (m-vardec 'p 'Permissions))]
+                       'p (m-vardec 'p 'Perm))]
         [rule-names '("rule1")]
         [rules
          (hash
           "rule1"
           (m-rule "rule1" "permit" (list 'u 'p)
-                  (list '(exists r Role (and (ua u r) (ra r p))))))]
+                  '(exists r Role (and (ua u r) (ra r p)))))]
         [rcomb ""]
         [target 'true]
         [idbs
-         (hash "permit" (list 'User 'Permission))])
+         (hash "permit" (list 'User 'Perm))])
     (m-policy name
               theory
               vardecs
