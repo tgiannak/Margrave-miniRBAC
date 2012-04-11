@@ -2,3 +2,7 @@
 .swp
 compiled/
 \#*#
+*.aux
+*.log
+*.pdf
+*.synctex.gz

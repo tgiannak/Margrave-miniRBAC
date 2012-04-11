@@ -59,7 +59,7 @@
 ;; Compile constraints into a miniRBAC vocabulary.
 ;; The name argument is the name of the vocab.
 (define (constraints->vocab name constrs)
-  (m-vocabulary name empty
+  (m-vocabulary name
                 rbac-types
                 rbac-preds
                 (constraints->constants constrs)
