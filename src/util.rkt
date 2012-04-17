@@ -19,6 +19,7 @@
   (match maybes
     [(list) empty]
     [(cons #f ms)
+     (when (empty? vals) (error "not enough values to fill in for falses"))
      (cons (first vals) (fill-in-falses ms (rest vals)))]
     [(cons m ms)
      (cons m (fill-in-falses ms vals))]))
