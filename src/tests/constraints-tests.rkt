@@ -36,5 +36,3 @@
                                                  '()
                                                  '())
                     empty))))
-
-(run-tests constraints-tests)
