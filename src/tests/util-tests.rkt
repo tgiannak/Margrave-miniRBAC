@@ -4,6 +4,8 @@
          rackunit/text-ui
          "../util.rkt")
 
+(provide util-tests)
+
 (define symbol-append-tests
   (test-suite "symbol-append tests"
     (test-case "empty first"
@@ -81,5 +83,3 @@
     symbol-append-tests
     fill-in-falses-tests
     fill-in-falses*-tests))
-
-(run-tests util-tests)
