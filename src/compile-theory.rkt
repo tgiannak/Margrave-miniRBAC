@@ -126,20 +126,22 @@
   ;;
   (define min-pred-size
     (let* ([var-groups (gensym-groups count nvars)]
+           [tuples (map (lambda (vs) (fill-in-falses fixed vs)) var-groups)]
            [vars/sorts (var-groups/sorts var-groups var-sorts)]
            [matrix (all-vars-distinct var-groups)])
       (existentials-prefix
        (append* vars/sorts)
-       `(and ,@(map (lambda (vars) `(,pred ,@vars)) var-groups)
+       `(and ,@(map (lambda (vars) `(,pred ,@vars)) tuples)
              ,matrix))))
   
   (define max-pred-size
     (let* ([var-groups (gensym-groups count nvars)]
+           [tuples (map (lambda (vs) (fill-in-falses fixed vs)) var-groups)]
            [vars/sorts (var-groups/sorts var-groups var-sorts)]
            [matrix (some-var-same var-groups)])
       (universals-prefix
        (append* vars/sorts)
-       `(implies (and ,@(map (lambda (vars) `(,pred ,@vars)) var-groups))
+       `(implies (and ,@(map (lambda (vars) `(,pred ,@vars)) tuples))
                  ,matrix))))
   
   (list `(formula ,min-pred-size)
